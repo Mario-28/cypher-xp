@@ -3,7 +3,7 @@
     <img src="{{actor.img}}" class="cxp-portrait" alt="{{actor.name}}">
     <div class="cxp-header-info">
       <h2>{{actor.name}}</h2>
-      <div class="cxp-header-stats">
+      <div class="cxp-header-stats" data-cxp-scroll>
         <span class="cxp-tag">Tier {{tier}}</span>
         <span class="cxp-tag">XP {{xp}}</span>
         <span class="cxp-tag">Progress {{progress}}{{#if threshold}}/{{threshold}}{{else}} (max tier){{/if}}</span>
@@ -21,7 +21,8 @@
     <p class="cxp-remaining">Maximum tier reached.</p>
   {{/if}}
 
-  <nav class="cxp-tabs">
+  <nav class="cxp-tabs" data-cxp-scroll>
+    <a data-action="changeTab" data-tab="chart" class="{{#if (eq activeTab 'chart')}}active{{/if}}">Chart</a>
     <a data-action="changeTab" data-tab="overview" class="{{#if (eq activeTab 'overview')}}active{{/if}}">Overview</a>
     <a data-action="changeTab" data-tab="develop" class="{{#if (eq activeTab 'develop')}}active{{/if}}">Develop</a>
     <a data-action="changeTab" data-tab="assets" class="{{#if (eq activeTab 'assets')}}active{{/if}}">Assets</a>
@@ -29,7 +30,135 @@
     <a data-action="changeTab" data-tab="history" class="{{#if (eq activeTab 'history')}}active{{/if}}">History</a>
   </nav>
 
-  <section class="cxp-tab-content">
+  <section class="cxp-tab-content" data-cxp-scroll>
+
+    {{#if (eq activeTab 'chart')}}
+      <div class="cxp-chart-toolbar">
+        <h3>XP Tracking</h3>
+        <button data-action="logSpend" type="button" class="cxp-log-spend-btn"><i class="fa-solid fa-dice"></i> Log Immediate Spend</button>
+      </div>
+
+      {{#if charts.hasData}}
+        <div class="cxp-stat-cards">
+          <div class="cxp-stat-card"><span class="cxp-stat-value">{{xp}}</span><span class="cxp-stat-label">Current XP</span></div>
+          <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.earned}}</span><span class="cxp-stat-label">Total Earned</span></div>
+          <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.intrusionEarned}}</span><span class="cxp-stat-label">From GM Intrusions</span></div>
+          <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.spentDevelopment}}</span><span class="cxp-stat-label">Spent on Development</span></div>
+          <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.spentImmediate}}</span><span class="cxp-stat-label">Spent on Immediate</span></div>
+          <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.playerIntrusionSpent}}</span><span class="cxp-stat-label">Spent on Player Intrusions</span></div>
+        </div>
+
+        <div class="cxp-chart-block">
+          <h4>XP Gained per Session</h4>
+          <svg viewBox="0 0 {{charts.earnedPerSession.width}} {{charts.earnedPerSession.height}}" class="cxp-chart" role="img" aria-label="XP gained per session">
+            {{#each charts.earnedPerSession.gridLines}}
+              <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+              <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+            {{/each}}
+            <line x1="{{charts.earnedPerSession.padLeft}}" y1="{{charts.earnedPerSession.baseY}}" x2="{{charts.earnedPerSession.width}}" y2="{{charts.earnedPerSession.baseY}}" class="cxp-chart-baseline"/>
+            {{#each charts.earnedPerSession.bars}}
+              <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="3" class="cxp-bar cxp-bar-earned"><title>{{this.label}}: {{this.value}} XP</title></rect>
+              {{#if (gt this.height 0)}}<text x="{{this.valueX}}" y="{{this.valueY}}" class="cxp-chart-value">{{this.value}}</text>{{/if}}
+              <text x="{{this.labelX}}" y="{{this.labelY}}" class="cxp-chart-label">{{this.label}}</text>
+            {{/each}}
+          </svg>
+        </div>
+
+        <div class="cxp-chart-block">
+          <h4>Development Progress per Session</h4>
+          <svg viewBox="0 0 {{charts.progressPerSession.width}} {{charts.progressPerSession.height}}" class="cxp-chart" role="img" aria-label="Development Progress per session">
+            {{#each charts.progressPerSession.gridLines}}
+              <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+              <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+            {{/each}}
+            <line x1="{{charts.progressPerSession.padLeft}}" y1="{{charts.progressPerSession.baseY}}" x2="{{charts.progressPerSession.width}}" y2="{{charts.progressPerSession.baseY}}" class="cxp-chart-baseline"/>
+            {{#each charts.progressPerSession.bars}}
+              <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="3" class="cxp-bar cxp-bar-progress"><title>{{this.label}}: +{{this.value}} Progress</title></rect>
+              {{#if (gt this.height 0)}}<text x="{{this.valueX}}" y="{{this.valueY}}" class="cxp-chart-value">{{this.value}}</text>{{/if}}
+              <text x="{{this.labelX}}" y="{{this.labelY}}" class="cxp-chart-label">{{this.label}}</text>
+            {{/each}}
+          </svg>
+        </div>
+
+        {{#if charts.hasIntrusionData}}
+        <div class="cxp-chart-block">
+          <h4>XP Gained by GM Intrusion (per Session)</h4>
+          <svg viewBox="0 0 {{charts.intrusionPerSession.width}} {{charts.intrusionPerSession.height}}" class="cxp-chart" role="img" aria-label="XP gained by GM intrusion per session">
+            {{#each charts.intrusionPerSession.gridLines}}
+              <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+              <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+            {{/each}}
+            <line x1="{{charts.intrusionPerSession.padLeft}}" y1="{{charts.intrusionPerSession.baseY}}" x2="{{charts.intrusionPerSession.width}}" y2="{{charts.intrusionPerSession.baseY}}" class="cxp-chart-baseline"/>
+            {{#each charts.intrusionPerSession.bars}}
+              <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="3" class="cxp-bar cxp-bar-intrusion"><title>{{this.label}}: {{this.value}} XP from intrusions</title></rect>
+              {{#if (gt this.height 0)}}<text x="{{this.valueX}}" y="{{this.valueY}}" class="cxp-chart-value">{{this.value}}</text>{{/if}}
+              <text x="{{this.labelX}}" y="{{this.labelY}}" class="cxp-chart-label">{{this.label}}</text>
+            {{/each}}
+          </svg>
+        </div>
+        {{/if}}
+
+        {{#if charts.hasImmediateData}}
+        <div class="cxp-chart-block">
+          <h4>Immediate XP Spent per Session (rerolls, player intrusions, insights)</h4>
+          <svg viewBox="0 0 {{charts.immediatePerSession.width}} {{charts.immediatePerSession.height}}" class="cxp-chart" role="img" aria-label="Immediate XP spent per session">
+            {{#each charts.immediatePerSession.gridLines}}
+              <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+              <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+            {{/each}}
+            <line x1="{{charts.immediatePerSession.padLeft}}" y1="{{charts.immediatePerSession.baseY}}" x2="{{charts.immediatePerSession.width}}" y2="{{charts.immediatePerSession.baseY}}" class="cxp-chart-baseline"/>
+            {{#each charts.immediatePerSession.bars}}
+              <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="3" class="cxp-bar cxp-bar-immediate"><title>{{this.label}}: {{this.value}} XP spent</title></rect>
+              {{#if (gt this.height 0)}}<text x="{{this.valueX}}" y="{{this.valueY}}" class="cxp-chart-value">{{this.value}}</text>{{/if}}
+              <text x="{{this.labelX}}" y="{{this.labelY}}" class="cxp-chart-label">{{this.label}}</text>
+            {{/each}}
+          </svg>
+        </div>
+        {{/if}}
+
+        {{#if charts.hasCategoryData}}
+        <div class="cxp-chart-block">
+          <h4>Development Spending by Category</h4>
+          <div class="cxp-donut-row">
+            <svg viewBox="0 0 {{charts.categoryDonut.size}} {{charts.categoryDonut.size}}" class="cxp-donut" role="img" aria-label="Development spending by category">
+              {{#each charts.categoryDonut.paths}}
+                <path d="{{this.path}}" fill="{{this.color}}"><title>{{this.label}}: {{this.value}} XP ({{this.percent}}%)</title></path>
+              {{/each}}
+              <text x="{{charts.categoryDonut.cx}}" y="{{charts.categoryDonut.cy}}" class="cxp-donut-center">{{charts.categoryDonut.total}} XP</text>
+            </svg>
+            <ul class="cxp-donut-legend">
+              {{#each charts.categoryDonut.paths}}
+                <li><span class="cxp-legend-dot" style="background: {{this.color}};"></span>{{this.label}} — {{this.value}} XP ({{this.percent}}%)</li>
+              {{/each}}
+            </ul>
+          </div>
+        </div>
+        {{/if}}
+
+        <div class="cxp-chart-block">
+          <h4>Sessions</h4>
+          <table class="cxp-session-table">
+            <thead><tr><th>Date</th><th>Earned</th><th>Spent</th><th>Net</th><th>Progress</th><th>Intrusion XP</th><th>Immediate Spent</th></tr></thead>
+            <tbody>
+              {{#each charts.sessionTable}}
+                <tr>
+                  <td>{{this.date}}</td>
+                  <td class="cxp-pos">+{{this.earned}}</td>
+                  <td class="cxp-neg">−{{this.spent}}</td>
+                  <td class="{{#if (gte this.net 0)}}cxp-pos{{else}}cxp-neg{{/if}}">{{this.net}}</td>
+                  <td>+{{this.progress}}</td>
+                  <td>{{this.intrusion}}</td>
+                  <td>{{this.immediate}}</td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+      {{else}}
+        <p class="cxp-empty">No XP activity recorded yet. Charts appear once XP is earned, spent, or logged. Use <strong>Log Immediate Spend</strong> to record rerolls and player intrusions; GM intrusions and approved purchases are recorded automatically.</p>
+      {{/if}}
+    {{/if}}
+
     {{#if (eq activeTab 'overview')}}
       <h3>Recent Activity</h3>
       <ul class="cxp-list">
@@ -45,11 +174,11 @@
 
     {{#if (eq activeTab 'develop')}}
       <h3>Permanent Development</h3>
-      <p class="cxp-hint">Every purchase requires GM approval before it takes effect.</p>
+      <p class="cxp-hint">Hover any listing for an explanation. Every purchase requires GM approval before it takes effect.</p>
       <ul class="cxp-catalog">
         {{#each catalog}}
-          <li>
-            <span class="cxp-catalog-label">{{this.label}}</span>
+          <li data-cxp-tooltip="{{this.key}}" class="cxp-has-tooltip">
+            <span class="cxp-catalog-label"><i class="fa-solid {{this.icon}} cxp-catalog-icon"></i>{{this.label}}</span>
             <span class="cxp-catalog-cost">
               {{#if this.cost}}{{this.cost}} XP{{/if}}
               {{#if this.costBase}}from {{this.costBase}} XP{{/if}}

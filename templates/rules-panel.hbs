@@ -1,0 +1,281 @@
+<div class="cxp-rules-app">
+  <header class="cxp-rules-header">
+    <p class="cxp-rules-eyebrow">Cypher System House Rules</p>
+    <h1>Development Track</h1>
+    <p class="cxp-rules-subtitle">A flexible advancement system in which lasting growth builds toward increasingly demanding tier breakthroughs.</p>
+  </header>
+
+  <nav class="cxp-rules-nav" aria-label="Contents">
+    <a data-action="jumpToSection" data-section="overview">Overview</a>
+    <a data-action="jumpToSection" data-section="progress">Progress</a>
+    <a data-action="jumpToSection" data-section="chart">Chart</a>
+    <a data-action="jumpToSection" data-section="purchases">Purchases</a>
+    <a data-action="jumpToSection" data-section="limits">Limits</a>
+    <a data-action="jumpToSection" data-section="breakthrough">Breakthrough</a>
+    <a data-action="jumpToSection" data-section="excluded">Excluded XP</a>
+    <a data-action="jumpToSection" data-section="example">Example</a>
+    <a data-action="jumpToSection" data-section="assets">Assets Guide</a>
+  </nav>
+
+  <section id="cxp-rules-overview">
+    <h2>1. Overview</h2>
+    <p class="lead">Experience points remain a single resource. Only XP spent on <strong>permanent character development</strong> advances a character toward the next tier.</p>
+    <div class="cxp-rules-grid">
+      <article class="cxp-rules-card">
+        <h3>Immediate XP</h3>
+        <p>XP spent to affect the current situation: rerolls, intrusions, insights, and temporary advantages. It does <strong>not</strong> create Development Progress.</p>
+      </article>
+      <article class="cxp-rules-card">
+        <h3>Development XP</h3>
+        <p>XP spent on a lasting improvement: skills, abilities, Pool increases, assets, and similar changes. It creates Development Progress.</p>
+      </article>
+    </div>
+    <div class="cxp-rules-rule"><strong>Core Rule.</strong> When a character spends XP on a qualifying permanent development purchase, add the full XP cost to that character's lifetime Development Progress.</div>
+    <div class="cxp-rules-formula">Development Progress Gained = XP Spent on Qualifying Permanent Development</div>
+    <p>There is no requirement to purchase four separate advancement categories. A character may buy as many permitted permanent advancements as they wish.</p>
+  </section>
+
+  <section id="cxp-rules-progress">
+    <h2>2. Development Progress and Tiers</h2>
+    <p>Development Progress is cumulative and never resets. When a character reaches a threshold, they immediately gain that tier. Progress beyond a threshold remains recorded and contributes to the next tier.</p>
+    <table>
+      <caption>Tier thresholds</caption>
+      <thead><tr><th>New Tier</th><th>Total Progress Required</th><th>Additional Progress Required</th></tr></thead>
+      <tbody>
+        <tr><td>Tier 2</td><td>24</td><td>24</td></tr>
+        <tr><td>Tier 3</td><td>60</td><td>36</td></tr>
+        <tr><td>Tier 4</td><td>112</td><td>52</td></tr>
+        <tr><td>Tier 5</td><td>184</td><td>72</td></tr>
+        <tr><td>Tier 6</td><td>280</td><td>96</td></tr>
+      </tbody>
+    </table>
+    <div class="cxp-rules-rule"><strong>Result.</strong> Characters grow continuously, but each later tier demands considerably more investment. High-tier characters are exceptional because their progress represents a long history of permanent development.</div>
+  </section>
+
+  <section id="cxp-rules-chart">
+    <h2>3. Advancement at a Glance</h2>
+    <p>Gold bars show the additional Progress required in each tier; the red line shows the cumulative total threshold.</p>
+    <div class="cxp-rules-visual">
+      <svg viewBox="0 0 980 470" role="img" aria-label="Development Track tier advancement chart">
+        <rect x="0" y="0" width="980" height="470" rx="10" fill="#fffaf0"/>
+        <g font-family="Arial, sans-serif" fill="#5f6d76" font-size="14">
+          <text x="45" y="69">100</text><text x="53" y="139">75</text><text x="53" y="209">50</text><text x="53" y="279">25</text><text x="61" y="349">0</text>
+        </g>
+        <g stroke="#d8c6a3" stroke-width="1">
+          <line x1="85" y1="65" x2="940" y2="65"/><line x1="85" y1="135" x2="940" y2="135"/><line x1="85" y1="205" x2="940" y2="205"/><line x1="85" y1="275" x2="940" y2="275"/><line x1="85" y1="345" x2="940" y2="345"/>
+        </g>
+        <g fill="#b98328">
+          <rect x="125" y="278" width="86" height="67" rx="5"/><rect x="275" y="244" width="86" height="101" rx="5"/><rect x="425" y="199" width="86" height="146" rx="5"/><rect x="575" y="143" width="86" height="202" rx="5"/><rect x="725" y="76" width="86" height="269" rx="5"/>
+        </g>
+        <g font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#233947" text-anchor="middle">
+          <text x="168" y="367">Tier 2</text><text x="318" y="367">Tier 3</text><text x="468" y="367">Tier 4</text><text x="618" y="367">Tier 5</text><text x="768" y="367">Tier 6</text>
+        </g>
+        <g font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#6d4b13" text-anchor="middle">
+          <text x="168" y="270">+24</text><text x="318" y="236">+36</text><text x="468" y="191">+52</text><text x="618" y="135">+72</text><text x="768" y="68">+96</text>
+        </g>
+        <polyline points="85,345 168,328 318,303 468,267 618,216 768,149" fill="none" stroke="#9d3b2d" stroke-width="4"/>
+        <g fill="#9d3b2d" stroke="#fffaf0" stroke-width="3">
+          <circle cx="85" cy="345" r="6"/><circle cx="168" cy="328" r="6"/><circle cx="318" cy="303" r="6"/><circle cx="468" cy="267" r="6"/><circle cx="618" cy="216" r="6"/><circle cx="768" cy="149" r="6"/>
+        </g>
+        <g font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#9d3b2d" text-anchor="middle">
+          <text x="85" y="332">0</text><text x="168" y="315">24</text><text x="318" y="290">60</text><text x="468" y="254">112</text><text x="618" y="203">184</text><text x="768" y="136">280</text>
+        </g>
+        <text x="85" y="405" font-family="Arial, sans-serif" font-size="14" fill="#5f6d76">Development Progress is cumulative. Red labels: total thresholds. Gold labels: additional amount needed for that tier.</text>
+      </svg>
+      <div class="cxp-rules-legend">
+        <span class="cxp-rules-key"><span class="cxp-rules-dot cxp-gold"></span>Additional Progress required in this tier</span>
+        <span class="cxp-rules-key"><span class="cxp-rules-dot"></span>Cumulative Development Progress threshold</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="cxp-rules-purchases">
+    <h2>4. Qualifying Development Purchases</h2>
+    <p>Each purchase below is permanent and adds its full cost to Development Progress. The GM may require appropriate narrative justification.</p>
+    <table>
+      <caption>Standard character development</caption>
+      <thead><tr><th>Development</th><th>XP Cost</th><th>Requirements and Limits</th></tr></thead>
+      <tbody>
+        <tr><td>Skill training</td><td>3 XP</td><td>Become trained in one skill. May be purchased multiple times.</td></tr>
+        <tr><td>Skill specialization</td><td>4 XP</td><td>Become specialized in one trained skill.</td></tr>
+        <tr><td>Remove an inability</td><td>3 XP</td><td>Remove one permanent inability.</td></tr>
+        <tr><td>Language, lore, trade, or profession</td><td>2 XP</td><td>Must have a continuing place in the campaign.</td></tr>
+        <tr><td>Increase capabilities</td><td>4 XP</td><td>Add 4 points divided among Might, Speed, and Intellect Pools.</td></tr>
+        <tr><td>Increase Edge</td><td>5 XP</td><td>Increase one Edge by 1; each Edge may increase only once per tier.</td></tr>
+        <tr><td>Increase Effort</td><td>5 XP</td><td>Increase Effort by 1; maximum once per tier.</td></tr>
+        <tr><td>Improve recovery</td><td>4 XP</td><td>Add +2 to recovery rolls; maximum twice during the character's career.</td></tr>
+        <tr><td>Improve armor use</td><td>4 XP</td><td>Reduce armor's additional Speed-Effort cost by 1.</td></tr>
+      </tbody>
+    </table>
+    <h3>Abilities</h3>
+    <table>
+      <caption>Ability development</caption>
+      <thead><tr><th>Development</th><th>XP Cost</th><th>Requirements and Limits</th></tr></thead>
+      <tbody>
+        <tr><td>Additional type ability</td><td>5 + ability tier</td><td>Must be from the character's type and at or below the character's current tier. Normal prerequisites apply.</td></tr>
+        <tr><td>Off-list ability</td><td>8 + (2 × ability tier)</td><td>Must be at or below the character's current tier. Requires GM approval and a fictional source. Maximum one off-list ability purchased per tier.</td></tr>
+      </tbody>
+    </table>
+    <p class="cxp-rules-note">Focus abilities cannot be purchased. They are received only upon reaching their relevant tier.</p>
+  </section>
+
+  <section id="cxp-rules-limits">
+    <h2>5. Advancement Limits</h2>
+    <ul>
+      <li>Characters may buy any number of skills, specializations, lore areas, professions, standard abilities, and assets, provided they can pay and meet the requirements.</li>
+      <li>An ability may be purchased only when its tier is equal to or lower than the character's current tier.</li>
+      <li>Each Edge may be increased once per tier; Effort may be increased once per tier.</li>
+      <li>A character may purchase only one off-list ability in each tier.</li>
+      <li>The GM may require training, research, a mentor, recovered technology, a ritual, a faction connection, downtime, or another suitable in-world explanation.</li>
+    </ul>
+  </section>
+
+  <section id="cxp-rules-breakthrough">
+    <h2>6. Tier Breakthrough</h2>
+    <p>When a character reaches a new threshold, they immediately gain that tier and its ordinary tier benefits.</p>
+    <ol>
+      <li>Increase the character's tier by 1.</li>
+      <li>Grant the focus ability associated with that tier.</li>
+      <li>Unlock the new tier of type abilities.</li>
+      <li>Choose one Breakthrough Benefit.</li>
+    </ol>
+    <table>
+      <caption>Choose one Breakthrough Benefit</caption>
+      <thead><tr><th>Benefit</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Thematic training</td><td>Become trained in one skill appropriate to the character's recent development or story.</td></tr>
+        <tr><td>Hardened potential</td><td>Add 2 points to one Pool.</td></tr>
+        <tr><td>Practical expertise</td><td>Gain one appropriate language, lore area, trade, or profession.</td></tr>
+        <tr><td>Lasting foothold</td><td>Gain one modest permanent narrative asset, subject to GM approval.</td></tr>
+        <tr><td>Refined technique</td><td>Replace one purchased type ability with another ability of equal or lower tier.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="cxp-rules-excluded">
+    <h2>7. XP That Does Not Create Progress</h2>
+    <p>These useful expenditures do not permanently develop the character and therefore do not add to Development Progress.</p>
+    <div class="cxp-rules-grid">
+      <article class="cxp-rules-card">
+        <h3>Reactive Spending</h3>
+        <ul>
+          <li>Refusing a GM intrusion</li>
+          <li>Rerolling a die roll</li>
+          <li>Player intrusions</li>
+          <li>Insights, clues, declarations, and flashbacks</li>
+        </ul>
+      </article>
+      <article class="cxp-rules-card">
+        <h3>Temporary Spending</h3>
+        <ul>
+          <li>Temporary skills or abilities</li>
+          <li>Single-scene or single-session benefits</li>
+          <li>Consumable gear and cyphers</li>
+          <li>Bribes, healing, travel, and ordinary purchases</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section id="cxp-rules-example">
+    <h2>8. Example of Play</h2>
+    <p>Rin is tier 1 and has accumulated 20 Development Progress. Rin purchases a tier 1 type ability, costing 6 XP.</p>
+    <div class="cxp-rules-formula">20 Current Progress + 6 XP Development Purchase = 26 Total Development Progress</div>
+    <p>Rin passes the Tier 2 threshold of 24 and immediately becomes tier 2. The total of 26 remains recorded. To reach tier 3 at 60 total Progress, Rin needs 34 more points of permanent development.</p>
+    <p>If Rin spends XP to refuse a GM intrusion or make a player intrusion, it has no effect on the Development Track.</p>
+  </section>
+
+  <section id="cxp-rules-assets" class="cxp-rules-asset">
+    <h2>9. Permanent Assets: Expanded Guide</h2>
+    <p>Permanent assets are lasting elements of a character's position, equipment, relationships, or resources. They should create continuing story opportunities and a reliable but limited advantage; they should not replace a tier ability, eliminate an entire category of challenge, or provide unrestricted wealth.</p>
+    <div class="cxp-rules-rule"><strong>Asset Rule.</strong> A permanent asset costs 3–10 XP. Its cost adds to Development Progress. The GM sets the exact cost according to the asset's reliability, scope, mechanical benefit, rarity, and ability to solve problems without risk.</div>
+
+    <h3>Pricing Guide</h3>
+    <table>
+      <caption>Choose a price from this guide</caption>
+      <thead><tr><th>Cost</th><th>Scope</th><th>Typical Effect</th></tr></thead>
+      <tbody>
+        <tr><td>3 XP</td><td>Minor</td><td>A narrow, dependable narrative benefit or a modest resource.</td></tr>
+        <tr><td>4–5 XP</td><td>Useful</td><td>A recurring benefit with clear limits, or an asset that provides training, an asset, or a small advantage in a defined area.</td></tr>
+        <tr><td>6–8 XP</td><td>Significant</td><td>A versatile resource, protected location, influential contact, or upgrade with meaningful but bounded impact.</td></tr>
+        <tr><td>9–10 XP</td><td>Major</td><td>A rare campaign-shaping asset. It requires GM agreement, responsibilities, and clear complications or limits.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Contacts and Influence</h3>
+    <table>
+      <caption>People, factions, and social standing</caption>
+      <thead><tr><th>Asset</th><th>Suggested Cost</th><th>Description and Options</th></tr></thead>
+      <tbody>
+        <tr><td>Reliable contact</td><td>3 XP</td><td>A courier, archivist, fixer, healer, scout, or merchant who can offer information or modest services in their field. They are not always available and have their own priorities.</td></tr>
+        <tr><td>Expert mentor</td><td>4–5 XP</td><td>A specialist who can provide access to training, research, or a narrow professional network. This may justify new skills or unusual ability purchases.</td></tr>
+        <tr><td>Faction standing</td><td>5–7 XP</td><td>Recognized membership, rank, or goodwill with a guild, clan, academy, crew, cult, military unit, or similar group. It grants access and obligations, not unquestioned authority.</td></tr>
+        <tr><td>Influential patron</td><td>8–10 XP</td><td>A powerful sponsor who can open major doors, provide exceptional assignments, or offer rare resources. The relationship should create duties, enemies, or political pressure.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Places and Infrastructure</h3>
+    <table>
+      <caption>Homes, bases, and facilities</caption>
+      <thead><tr><th>Asset</th><th>Suggested Cost</th><th>Description and Options</th></tr></thead>
+      <tbody>
+        <tr><td>Safehouse or apartment</td><td>3 XP</td><td>A known place to rest, hide modest gear, meet privately, and recover between adventures. It may be threatened, watched, or located far from the current mission.</td></tr>
+        <tr><td>Workshop, library, shrine, or laboratory</td><td>4–6 XP</td><td>A dedicated facility that supports crafting, repair, research, rituals, analysis, or training. It should grant an asset on appropriate tasks when the facility is available.</td></tr>
+        <tr><td>Defensible base</td><td>6–8 XP</td><td>A larger shared refuge with staff, storage, defenses, or specialized rooms. It creates a home territory and a target worth protecting.</td></tr>
+        <tr><td>Portal site, hidden archive, or mobile headquarters</td><td>9–10 XP</td><td>A rare strategic location with a defining special feature. Its use must have limits, costs, access conditions, or consequences.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Vehicles, Gear, and Companions</h3>
+    <table>
+      <caption>Lasting practical resources</caption>
+      <thead><tr><th>Asset</th><th>Suggested Cost</th><th>Description and Options</th></tr></thead>
+      <tbody>
+        <tr><td>Specialized equipment kit</td><td>3 XP</td><td>A professional kit, field laboratory, disguise wardrobe, climbing rig, survival package, ritual implements, or similar gear. It acts as an asset for its narrow intended use.</td></tr>
+        <tr><td>Personal vehicle or mount</td><td>4–6 XP</td><td>A reliable vehicle, animal companion, spacecraft berth, boat, or unusual mount. Decide its speed, carrying capacity, maintenance needs, and vulnerabilities.</td></tr>
+        <tr><td>Upgraded vehicle or signature device</td><td>6–8 XP</td><td>Add a workshop, sensor suite, stealth system, defensive feature, secure compartment, specialized tool, or another bounded feature. Each upgrade should have a distinct function.</td></tr>
+        <tr><td>Bound companion</td><td>5–8 XP</td><td>A trained animal, drone, spirit, construct, or retainer. It should have a narrow role and remain a character rather than becoming an unlimited extra PC.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Titles, Holdings, and Special Rights</h3>
+    <table>
+      <caption>Assets that change a character's place in the world</caption>
+      <thead><tr><th>Asset</th><th>Suggested Cost</th><th>Description and Options</th></tr></thead>
+      <tbody>
+        <tr><td>Professional title or license</td><td>3–4 XP</td><td>Marshal, licensed explorer, guild engineer, court physician, academic title, trade warrant, or similar credential. It provides recognized authority only in its proper context.</td></tr>
+        <tr><td>Business, holding, or trade route</td><td>5–7 XP</td><td>A shop, farm, salvage claim, small ship share, local enterprise, or trade relationship. It supports lifestyle and plot hooks; it does not create unlimited cash.</td></tr>
+        <tr><td>Relic attunement</td><td>4–8 XP</td><td>A permanent bond with an artifact, magical object, numenera device, or inherited weapon. Define one reliable feature, activation limits, and a meaningful complication.</td></tr>
+        <tr><td>Land, office, or political claim</td><td>8–10 XP</td><td>A meaningful territory, official office, inheritance, or recognized claim. It brings influence, responsibility, rivals, and ongoing obligations.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Asset Improvements</h3>
+    <p>Existing assets may be improved for 2–8 XP. Improvements also add their full cost to Development Progress.</p>
+    <div class="cxp-rules-grid">
+      <article class="cxp-rules-card">
+        <h3>Possible Improvements</h3>
+        <ul>
+          <li>Add a secure room, hidden entrance, or defensive system to a base.</li>
+          <li>Install a laboratory, forge, infirmary, library, or communications array.</li>
+          <li>Give a vehicle better speed, stealth, storage, sensors, armor, or range.</li>
+          <li>Strengthen a contact into a mentor, partner, or faction representative.</li>
+          <li>Expand a business into a network, branch, or specialized supply source.</li>
+        </ul>
+      </article>
+      <article class="cxp-rules-card">
+        <h3>GM Checklist</h3>
+        <ul>
+          <li>What advantage does the asset provide?</li>
+          <li>When is it unavailable, insufficient, or risky?</li>
+          <li>What upkeep, duty, debt, or threat comes with it?</li>
+          <li>How can it generate future adventures?</li>
+          <li>Does its effect overlap with a purchased ability or another PC's specialty?</li>
+        </ul>
+      </article>
+    </div>
+    <p class="cxp-rules-note">A good permanent asset expands what the group can attempt. It should add options and story hooks, rather than remove uncertainty from play.</p>
+  </section>
+
+  <footer class="cxp-rules-footer">Development Track · Expanded Cypher System House Rules · Prepared for play and Foundry VTT implementation</footer>
+</div>

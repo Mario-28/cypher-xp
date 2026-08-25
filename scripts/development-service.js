@@ -1,5 +1,6 @@
-import { MODULE_ID, TIER_THRESHOLDS, MAX_TIER, NON_PROGRESS_TYPES, PURCHASE_CATALOG } from "./constants.js";
+import { MODULE_ID, TIER_THRESHOLDS, MAX_TIER, NON_PROGRESS_TYPES, PURCHASE_CATALOG, SPEND_TYPES } from "./constants.js";
 import { ActorAdapter } from "./actor-adapter.js";
+import { ItemService } from "./item-service.js";
 
 function uuid() { return foundry.utils.randomID(16); }
 
@@ -15,14 +16,7 @@ function defaultData() {
   };
 }
 
-/**
- * Core rules engine. All mutating operations that spend XP or change native
- * actor fields are GM-authoritative (applyApprovedRequest, applyTierBreakthrough,
- * recordIntrusion, gmAward).
- */
 export class DevelopmentService {
-
-  // ---------- Data access ----------
 
   static getData(actor) {
     return new ActorAdapter(actor).getDevelopmentFlags() ?? defaultData();
@@ -38,8 +32,6 @@ export class DevelopmentService {
     await new ActorAdapter(actor).setDevelopmentFlags(data);
   }
 
-  // ---------- Tier math ----------
-
   static getNextThreshold(tier) {
     if (tier >= MAX_TIER) return null;
     return TIER_THRESHOLDS[tier + 1] ?? null;
@@ -50,8 +42,6 @@ export class DevelopmentService {
     return threshold !== null && data.progress.lifetime >= threshold;
   }
 
-  // ---------- Catalog / validation ----------
-
   static computeCatalogCost(catalogKey, { abilityTier = 0 } = {}) {
     const entry = PURCHASE_CATALOG[catalogKey];
     if (!entry) throw new Error(`Unknown catalog key: ${catalogKey}`);
@@ -61,12 +51,6 @@ export class DevelopmentService {
     return entry.cost ?? null;
   }
 
-  /**
-   * Validates a prospective request. Returns { ok, reason }.
-   * Enforces: known category, once-per-tier limits, career caps,
-   * duplicate pending submissions, and XP affordability including
-   * already-pending requests.
-   */
   static validateRequest(actor, data, { category, requestedCost }) {
     const entry = PURCHASE_CATALOG[category];
     if (!entry) return { ok: false, reason: `Unknown purchase category: ${category}` };
@@ -94,13 +78,11 @@ export class DevelopmentService {
       .reduce((sum, r) => sum + Number(r.requestedCost ?? 0), 0);
 
     if (pendingTotal + cost > available) {
-      return { ok: false, reason: `Not enough XP. Available: ${available}, already reserved by pending requests: ${pendingTotal}, this request: ${cost}.` };
+      return { ok: false, reason: `Not enough XP. Available: ${available}, reserved by pending requests: ${pendingTotal}, this request: ${cost}.` };
     }
 
     return { ok: true };
   }
-
-  // ---------- Requests ----------
 
   static async createRequest(actor, payload) {
     const data = await DevelopmentService.ensureInitialized(actor);
@@ -146,11 +128,6 @@ export class DevelopmentService {
     return DevelopmentService.updateRequestStatus(actor, requestId, "cancelled", { cancelledAt: Date.now() });
   }
 
-  /**
-   * GM-only. Re-validates affordability at approval time, then applies the
-   * purchase: deducts XP, updates native fields where mapped, records the
-   * transaction and purchase, and flags tier readiness (no auto-advance).
-   */
   static async applyApprovedRequest(actor, requestId, gmOverrides = {}) {
     if (!game.user.isGM) throw new Error("Only a GM can apply approved requests.");
     if (!actor) throw new Error("Actor no longer exists.");
@@ -177,6 +154,8 @@ export class DevelopmentService {
 
     await adapter.spendXP(finalCost);
 
+    let itemResult = null;
+
     switch (request.category) {
       case "pool-increase": {
         const dist = request.poolDistribution ?? { [request.poolKey]: request.poolAmount ?? 4 };
@@ -189,6 +168,23 @@ export class DevelopmentService {
       case "effort-increase":     await adapter.increaseEffort(1); break;
       case "recovery-improvement":await adapter.improveRecoveryRoll(2); break;
       case "armor-improvement":   await adapter.improveArmorUse(); break;
+      case "skill-training":
+        itemResult = await ItemService.applySkillTraining(actor, request.skillName);
+        break;
+      case "skill-specialization":
+        itemResult = await ItemService.applySkillSpecialization(actor, request.skillId);
+        break;
+      case "remove-inability":
+        itemResult = await ItemService.applyRemoveInability(actor, request.skillId);
+        break;
+      case "type-ability":
+      case "off-list-ability":
+        itemResult = await ItemService.createAbility(actor, {
+          name: request.abilityName ?? request.label,
+          cost: request.abilityCost ?? "0",
+          pool: request.abilityPool ?? "Intellect"
+        });
+        break;
       case "permanent-asset":
         data.assets.push({
           id: uuid(),
@@ -201,13 +197,10 @@ export class DevelopmentService {
         break;
       case "asset-improvement": {
         const asset = data.assets.find(a => a.id === request.assetId);
-        if (asset) {
-          (asset.improvements ??= []).push({ label: request.notes || request.label, cost: finalCost, at: Date.now() });
-        }
+        if (asset) (asset.improvements ??= []).push({ label: request.notes || request.label, cost: finalCost, at: Date.now() });
         break;
       }
       default:
-        // skills / abilities: ledger-only in this version (native Item automation pending schema)
         break;
     }
 
@@ -220,7 +213,7 @@ export class DevelopmentService {
       progressDelta: progressGranted,
       actorUuid: actor.uuid,
       source: "gm-approval",
-      metadata: { requestId: request.id, category: request.category }
+      metadata: { requestId: request.id, category: request.category, itemResult }
     });
     data.transactions.push(transaction);
 
@@ -233,6 +226,7 @@ export class DevelopmentService {
         progressGranted,
         purchasedAtTier: actor.system?.basic?.tier ?? 1,
         acquiredAt: Date.now(),
+        itemId: itemResult?.itemId ?? null,
         notes: gmOverrides.notes ?? request.notes ?? ""
       });
     }
@@ -246,16 +240,14 @@ export class DevelopmentService {
     const tierReady = DevelopmentService.isTierReady(data, currentTier);
     if (tierReady) Hooks.callAll(`${MODULE_ID}.tierReady`, { actor, tier: currentTier });
 
-    Hooks.callAll(`${MODULE_ID}.purchaseApplied`, { actor, request, transaction, tierReady });
-    return { request, transaction, tierReady };
+    Hooks.callAll(`${MODULE_ID}.purchaseApplied`, { actor, request, transaction, tierReady, itemResult });
+    return { request, transaction, tierReady, itemResult };
   }
 
   static async rejectRequest(actor, requestId, reason = "") {
     if (!game.user.isGM) throw new Error("Only a GM can reject requests.");
     return DevelopmentService.updateRequestStatus(actor, requestId, "rejected", { rejectionReason: reason, rejectedAt: Date.now() });
   }
-
-  // ---------- Tier breakthrough (GM-confirmed, never automatic) ----------
 
   static async applyTierBreakthrough(actor, { benefit = null, poolKey = null } = {}) {
     if (!game.user.isGM) throw new Error("Only a GM can apply a tier breakthrough.");
@@ -274,7 +266,6 @@ export class DevelopmentService {
     const newTier = currentTier + 1;
     await adapter.setTier(newTier);
 
-    // Hardened Potential applies its +2 Pool immediately; other benefits are narrative/GM-handled.
     if (benefit === "hardened-potential" && poolKey) {
       await adapter.increasePoolMax(poolKey, 2);
     }
@@ -293,8 +284,6 @@ export class DevelopmentService {
     Hooks.callAll(`${MODULE_ID}.tierBreakthrough`, { actor, fromTier: currentTier, toTier: newTier, benefit });
     return { fromTier: currentTier, toTier: newTier, benefit };
   }
-
-  // ---------- Intrusion bridge (always 0 Progress) ----------
 
   static async recordIntrusion(actor, { xpDelta, type, label, metadata = {} }) {
     if (!game.user.isGM) throw new Error("Only a GM can record an intrusion event.");
@@ -331,7 +320,34 @@ export class DevelopmentService {
     return transaction;
   }
 
-  // ---------- Transactions ----------
+  static async recordImmediateSpend(actor, { spendType = "reroll", amount = 1, note = "" } = {}) {
+    if (!actor) throw new Error("Actor not found.");
+    const value = Number(amount);
+    if (!Number.isInteger(value) || value <= 0) throw new Error("Invalid XP amount.");
+    if (!SPEND_TYPES[spendType]) spendType = "other";
+
+    const adapter = new ActorAdapter(actor);
+    if (adapter.getXP() < value) {
+      ui.notifications.warn(`Cypher XP: ${actor.name} has only ${adapter.getXP()} XP — cannot log a ${value} XP spend.`);
+      return null;
+    }
+
+    await adapter.spendXP(value);
+    const data = await DevelopmentService.ensureInitialized(actor);
+    const transaction = DevelopmentService.buildTransaction({
+      type: "immediate-spend",
+      label: note || SPEND_TYPES[spendType].label,
+      xpDelta: -value,
+      progressDelta: 0,
+      actorUuid: actor.uuid,
+      source: "player-log",
+      metadata: { spendType }
+    });
+    data.transactions.push(transaction);
+    await DevelopmentService.save(actor, data);
+    Hooks.callAll(`${MODULE_ID}.immediateSpend`, { actor, transaction });
+    return transaction;
+  }
 
   static buildTransaction({ type, label, xpDelta = 0, progressDelta = 0, actorUuid, source = "cypher-xp", status = "applied", metadata = {} }) {
     return { id: uuid(), timestamp: Date.now(), type, label, xpDelta, progressDelta, actorUuid, source, status, metadata };

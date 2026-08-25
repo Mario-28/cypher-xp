@@ -1,18 +1,13 @@
 import { MODULE_ID, MENU_ICON_SIZES } from "./constants.js";
 import { DevelopmentService } from "./development-service.js";
 import { log } from "./settings.js";
+import { makeDraggable, applySavedPosition } from "./utils/draggable.js";
 
-/**
- * GM-side integration: a single launcher icon next to the GM Taskbar's
- * Actor Visibility control, opening a flyout menu anchored above the taskbar.
- * Never depends on a guessed taskbar root selector: scans the whole document
- * for the Actor Visibility button, observes late DOM additions, and falls back
- * to a visible floating launcher if no anchor exists.
- */
 export class GmTaskbarIntegration {
   static WRAPPER_ID = "cypher-xp-gm-launcher-wrapper";
   static POPUP_ID = "cypher-xp-gm-flyout-menu";
   static MODULE_SPACE_ID = "cypher-xp-module-space";
+  static POSITION_SETTING = "gmIconPosition";
 
   static VISIBILITY_SELECTORS = [
     "[title*='Actor Visibility' i]", "[title*='Visibility' i]",
@@ -48,7 +43,6 @@ export class GmTaskbarIntegration {
       Hooks.on(hook, () => GmTaskbarIntegration.refresh());
     }
 
-    // Intrusion bridge (GM Taskbar owns intrusion logic; we only record XP).
     Hooks.on("cypherGmTaskbar.intrusionAccepted", async ({ actor, recipientActor }) => {
       await DevelopmentService.recordIntrusion(actor, { xpDelta: 2, type: "gm-intrusion", label: "GM Intrusion Accepted", metadata: { transferRequired: true } });
       if (recipientActor) {
@@ -62,7 +56,6 @@ export class GmTaskbarIntegration {
       GmTaskbarIntegration.refresh();
     });
 
-    // Outside click / Escape close the flyout.
     document.addEventListener("click", (event) => {
       const popup = document.getElementById(GmTaskbarIntegration.POPUP_ID);
       const wrapper = document.getElementById(GmTaskbarIntegration.WRAPPER_ID);
@@ -84,8 +77,6 @@ export class GmTaskbarIntegration {
     GmTaskbarIntegration._observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // ---------- DOM discovery ----------
-
   static findVisibilityButton(root = document) {
     for (const selector of GmTaskbarIntegration.VISIBILITY_SELECTORS) {
       const el = root.querySelector?.(selector) ?? document.querySelector(selector);
@@ -104,23 +95,31 @@ export class GmTaskbarIntegration {
     return null;
   }
 
-  // ---------- Attach ----------
-
   static attach(root = document) {
     if (!document.getElementById(GmTaskbarIntegration.WRAPPER_ID)) {
       const wrapper = GmTaskbarIntegration.buildLauncher();
-      const anchor = GmTaskbarIntegration.findVisibilityButton(root);
-      if (anchor?.parentElement) {
-        anchor.insertAdjacentElement("afterend", wrapper);
-        log("GM launcher attached next to Actor Visibility.");
+
+      if (applySavedPosition(wrapper, GmTaskbarIntegration.POSITION_SETTING)) {
+        log("GM launcher restored to saved position.");
       } else {
-        wrapper.classList.add("cxp-floating-fallback");
-        document.body.appendChild(wrapper);
-        log("Actor Visibility not found — GM launcher using visible floating fallback.");
+        const anchor = GmTaskbarIntegration.findVisibilityButton(root);
+        if (anchor?.parentElement) {
+          anchor.insertAdjacentElement("afterend", wrapper);
+          log("GM launcher attached next to Actor Visibility.");
+        } else {
+          wrapper.classList.add("cxp-floating-fallback");
+          document.body.appendChild(wrapper);
+          log("Actor Visibility not found — GM launcher using visible floating fallback.");
+        }
       }
       GmTaskbarIntegration.applyIconSize();
     }
     GmTaskbarIntegration.attachModuleSpace(root);
+  }
+
+  static resetPosition() {
+    document.getElementById(GmTaskbarIntegration.WRAPPER_ID)?.remove();
+    GmTaskbarIntegration.attach(document);
   }
 
   static buildLauncher() {
@@ -133,7 +132,7 @@ export class GmTaskbarIntegration {
     const total = pending + ready;
 
     wrapper.innerHTML = `
-      <button type="button" class="cxp-single-gm-btn ${total ? "cxp-has-alerts" : ""}" title="Cypher XP">
+      <button type="button" class="cxp-single-gm-btn ${total ? "cxp-has-alerts" : ""}" title="Cypher XP\nDrag to move · right-click to dock">
         <i class="fa-solid fa-chart-line"></i>
         ${total ? `<span class="cxp-badge-bubble">${total}</span>` : ""}
       </button>
@@ -153,17 +152,28 @@ export class GmTaskbarIntegration {
             <option value="large">Large</option>
           </select>
         </label>
+        <button type="button" class="cxp-flyout-btn cxp-reset-btn" data-cxp="reset"><i class="fa-solid fa-rotate-left"></i><span>Reset Position</span></button>
       </div>`;
 
-    wrapper.querySelector(".cxp-single-gm-btn").addEventListener("click", (event) => {
+    const btn = wrapper.querySelector(".cxp-single-gm-btn");
+    btn.addEventListener("click", (event) => {
       event.stopPropagation();
       GmTaskbarIntegration.togglePopup();
     });
 
-    wrapper.querySelectorAll("[data-cxp]").forEach(btn => btn.addEventListener("click", async (event) => {
+    makeDraggable(wrapper, btn, GmTaskbarIntegration.POSITION_SETTING, {
+      onReset: () => GmTaskbarIntegration.resetPosition()
+    });
+
+    wrapper.querySelectorAll("[data-cxp]").forEach(item => item.addEventListener("click", async (event) => {
       event.stopPropagation();
-      const action = btn.dataset.cxp;
+      const action = item.dataset.cxp;
       GmTaskbarIntegration.closePopup();
+      if (action === "reset") {
+        await game.settings.set(MODULE_ID, GmTaskbarIntegration.POSITION_SETTING, null);
+        GmTaskbarIntegration.resetPosition();
+        return;
+      }
       await GmTaskbarIntegration.handleAction(action);
     }));
 
@@ -176,8 +186,6 @@ export class GmTaskbarIntegration {
     return wrapper;
   }
 
-  // ---------- Flyout ----------
-
   static togglePopup() {
     const popup = document.getElementById(GmTaskbarIntegration.POPUP_ID);
     if (!popup) return;
@@ -187,8 +195,11 @@ export class GmTaskbarIntegration {
 
   static openPopup() {
     const popup = document.getElementById(GmTaskbarIntegration.POPUP_ID);
-    if (!popup) return;
+    const wrapper = document.getElementById(GmTaskbarIntegration.WRAPPER_ID);
+    if (!popup || !wrapper) return;
     GmTaskbarIntegration.updateBadges();
+    const rect = wrapper.getBoundingClientRect();
+    popup.classList.toggle("cxp-drop-below", rect.top < 280);
     popup.classList.add("cxp-open");
   }
 
@@ -237,8 +248,6 @@ export class GmTaskbarIntegration {
     ui.notifications.info(`Cypher XP: awarded ${result.amount} XP to ${actor.name}.`);
   }
 
-  // ---------- Badges / size ----------
-
   static updateBadges() {
     const wrapper = document.getElementById(GmTaskbarIntegration.WRAPPER_ID);
     if (!wrapper) return;
@@ -284,8 +293,6 @@ export class GmTaskbarIntegration {
     GmTaskbarIntegration.updateBadges();
   }
 
-  // ---------- Module space panel (optional host region) ----------
-
   static attachModuleSpace(root = document) {
     if (document.getElementById(GmTaskbarIntegration.MODULE_SPACE_ID)) return;
     const host = GmTaskbarIntegration.findModuleSpace(root);
@@ -326,8 +333,6 @@ export class GmTaskbarIntegration {
     root.appendChild(panel);
     log("Module-space panel attached.");
   }
-
-  // ---------- Party stats ----------
 
   static getPartyActors() {
     return game.actors.filter(a => a.type === "pc" && a.hasPlayerOwner);

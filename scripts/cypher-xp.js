@@ -25,11 +25,23 @@ Hooks.once("ready", () => {
       if (!game.user.isGM) return ui.notifications.warn("Cypher XP: only the GM can open this dashboard.");
       const { GmDevelopmentDashboard } = await import("./apps/gm-app.js");
       GmDevelopmentDashboard.show(options);
+    },
+    openRules: async () => {
+      const { RulesApp } = await import("./apps/rules-app.js");
+      RulesApp.show();
+    },
+    logSpend: async (actor, options) => {
+      return DevelopmentService.recordImmediateSpend(actor, options);
     }
   };
 
   game.modules.get(MODULE_ID).api = api;
   Hooks.callAll(`${MODULE_ID}.ready`, api);
+
+  Hooks.on(`${MODULE_ID}.logSpend`, ({ actor, spendType, amount, note }) => {
+    if (!actor) return null;
+    return DevelopmentService.recordImmediateSpend(actor, { spendType, amount, note });
+  });
 
   TaskbarIntegration.init();
   GmTaskbarIntegration.init();
@@ -37,10 +49,6 @@ Hooks.once("ready", () => {
   log("API registered; integrations initialized.");
 });
 
-/**
- * Foundry v13/v14: controls is a Record<string, SceneControl> and each
- * control's tools is a Record<string, SceneControlTool> keyed by name.
- */
 Hooks.on("getSceneControlButtons", (controls) => {
   const tokenControl = controls.tokens ?? Object.values(controls)[0];
   if (!tokenControl?.tools) return;

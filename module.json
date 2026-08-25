@@ -2,7 +2,7 @@
   "id": "cypher-xp",
   "title": "Cypher XP",
   "description": "GM-approved Development Track advancement for the Cypher System, with Cypher Taskbar and Cypher GM Taskbar integration.",
-  "version": "1.5.0",
+  "version": "1.12.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14.366"
@@ -37,7 +37,7 @@
       {
         "id": "cypher-taskbar",
         "type": "module",
-        "reason": "Player XP widget and Development Track launcher."
+        "reason": "Player launcher button with flyout on the players' side."
       },
       {
         "id": "cypher-GM-taskbar",

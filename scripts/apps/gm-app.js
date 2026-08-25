@@ -1,12 +1,15 @@
-import { MODULE_ID, BREAKTHROUGH_BENEFITS } from "../constants.js";
+import { MODULE_ID, BREAKTHROUGH_BENEFITS, PARTY_SERIES_COLORS } from "../constants.js";
 import { DevelopmentService } from "../development-service.js";
+import { OverflowWatcher } from "../utils/overflow.js";
+import { RulesLauncher } from "../utils/rules-launcher.js";
+import { summarizeTransactions, summarizeParty } from "../utils/chart-data.js";
+import { barChart, groupedBarChart, donutChart } from "../utils/svg-charts.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class GmDevelopmentDashboard extends HandlebarsApplicationMixin(ApplicationV2) {
   static _instance = null;
 
-  /** Singleton dashboard: focuses the existing window instead of duplicating it. */
   static show({ tab } = {}) {
     if (GmDevelopmentDashboard._instance?.rendered) {
       if (tab) GmDevelopmentDashboard._instance.activeTab = tab;
@@ -25,7 +28,7 @@ export class GmDevelopmentDashboard extends HandlebarsApplicationMixin(Applicati
     id: "cypher-xp-gm-dashboard",
     tag: "div",
     window: { title: "Cypher XP — GM Dashboard", icon: "fa-solid fa-user-shield", resizable: true },
-    position: { width: 920, height: 700 },
+    position: { width: 920, height: 720 },
     actions: {
       approveRequest: GmDevelopmentDashboard.onApproveRequest,
       rejectRequest: GmDevelopmentDashboard.onRejectRequest,
@@ -40,7 +43,7 @@ export class GmDevelopmentDashboard extends HandlebarsApplicationMixin(Applicati
 
   constructor() {
     super();
-    this.activeTab = "party";
+    this.activeTab = "chart";
     this._updateHook = Hooks.on("updateActor", (actor) => {
       if (actor.type === "pc" && this.rendered) this.render();
     });
@@ -52,12 +55,19 @@ export class GmDevelopmentDashboard extends HandlebarsApplicationMixin(Applicati
     return super.close(options);
   }
 
+  _onRender(context, options) {
+    super._onRender?.(context, options);
+    OverflowWatcher.enable(this.element);
+    RulesLauncher.attach(this.element);
+  }
+
   getPartyActors() {
     return game.actors.filter(a => a.type === "pc" && a.hasPlayerOwner);
   }
 
   async _prepareContext() {
-    const rows = this.getPartyActors().map(actor => {
+    const actors = this.getPartyActors();
+    const rows = actors.map(actor => {
       const data = DevelopmentService.getData(actor);
       const tier = actor.system?.basic?.tier ?? 1;
       const threshold = DevelopmentService.getNextThreshold(tier);
@@ -71,7 +81,67 @@ export class GmDevelopmentDashboard extends HandlebarsApplicationMixin(Applicati
         pendingRequests: pendingRequests.map(r => ({ ...r, actorId: actor.id }))
       };
     });
-    return { rows, allPending: rows.flatMap(r => r.pendingRequests), activeTab: this.activeTab };
+    return {
+      rows,
+      allPending: rows.flatMap(r => r.pendingRequests),
+      charts: GmDevelopmentDashboard.buildPartyCharts(actors),
+      activeTab: this.activeTab
+    };
+  }
+
+  /** Combined party charts — every actor on the same chart. */
+  static buildPartyCharts(actors) {
+    const perActor = actors.map(actor => {
+      const data = DevelopmentService.getData(actor);
+      const tier = actor.system?.basic?.tier ?? 1;
+      return {
+        actorId: actor.id,
+        name: actor.name,
+        img: actor.img,
+        xp: actor.system?.basic?.xp ?? 0,
+        tier,
+        progress: data.progress.lifetime,
+        threshold: DevelopmentService.getNextThreshold(tier),
+        summary: summarizeTransactions(data.transactions)
+      };
+    });
+
+    const party = summarizeParty(perActor);
+
+    const earnedPerSession = barChart(party.sessions.map(s => ({ label: s.date, value: s.earned })));
+    const progressPerSession = barChart(party.sessions.map(s => ({ label: s.date, value: s.progress })));
+
+    // All actors side by side: earned / intrusion / development / immediate.
+    const actorComparison = groupedBarChart(
+      perActor.map(a => ({ label: a.name })),
+      [
+        { key: "earned", label: "XP Earned", color: PARTY_SERIES_COLORS.earned, values: perActor.map(a => a.summary.totals.earned) },
+        { key: "intrusion", label: "From Intrusions", color: PARTY_SERIES_COLORS.intrusion, values: perActor.map(a => a.summary.totals.intrusionEarned) },
+        { key: "dev", label: "Spent on Development", color: PARTY_SERIES_COLORS.dev, values: perActor.map(a => a.summary.totals.spentDevelopment) },
+        { key: "immediate", label: "Spent on Immediate", color: PARTY_SERIES_COLORS.immediate, values: perActor.map(a => a.summary.totals.spentImmediate) }
+      ]
+    );
+
+    const progressPerActor = barChart(perActor.map(a => ({ label: a.name, value: a.progress })));
+    const categoryDonut = donutChart(party.byCategory);
+
+    const sessionTable = party.sessions.slice().reverse().slice(0, 12).map(s => ({
+      ...s,
+      net: s.earned - s.spent
+    }));
+
+    return {
+      hasData: party.hasData,
+      hasActors: perActor.length > 0,
+      totals: party.totals,
+      earnedPerSession,
+      progressPerSession,
+      actorComparison,
+      progressPerActor,
+      categoryDonut,
+      sessionTable,
+      hasCategoryData: party.byCategory.length > 0
+    };
   }
 
   static onChangeTab(event, target) {
@@ -91,6 +161,9 @@ export class GmDevelopmentDashboard extends HandlebarsApplicationMixin(Applicati
     try {
       const result = await DevelopmentService.applyApprovedRequest(actor, target.dataset.requestId, { finalCost });
       let message = `Approved "${request.label}" for ${actor.name} (${finalCost} XP).`;
+      if (result.itemResult?.action === "created") message += " Item created.";
+      if (result.itemResult?.action === "updated") message += ` Item updated (${result.itemResult.from} → ${result.itemResult.to}).`;
+      if (result.itemResult?.action === "none") message += ` Note: ${result.itemResult.note}`;
       if (result.tierReady) message += ` ${actor.name} is ready to advance — use the Advance button.`;
       ui.notifications.info(message);
     } catch (err) {

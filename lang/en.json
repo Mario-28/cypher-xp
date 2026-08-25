@@ -6,6 +6,9 @@
     },
     "GmApp": {
       "Title": "Cypher XP \u2014 GM Dashboard"
+    },
+    "RulesApp": {
+      "Title": "Cypher XP \u2014 Experience Rules"
     }
   }
 }

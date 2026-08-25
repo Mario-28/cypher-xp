@@ -1,32 +1,165 @@
 <div class="cypher-xp-gm-app">
-  <nav class="cxp-tabs">
+  <nav class="cxp-tabs" data-cxp-scroll>
+    <a data-action="changeTab" data-tab="chart" class="{{#if (eq activeTab 'chart')}}active{{/if}}">Chart</a>
     <a data-action="changeTab" data-tab="party" class="{{#if (eq activeTab 'party')}}active{{/if}}">Party</a>
     <a data-action="changeTab" data-tab="requests" class="{{#if (eq activeTab 'requests')}}active{{/if}}">Requests</a>
   </nav>
-  <section class="cxp-tab-content">
-    {{#if (eq activeTab 'party')}}
-      <table class="cxp-party-table">
-        <thead><tr><th></th><th>Name</th><th>Tier</th><th>XP</th><th>Progress</th><th>Pending</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          {{#each rows}}
-            <tr class="{{#if this.tierReady}}cxp-tier-ready-row{{/if}}">
-              <td><img src="{{this.img}}" class="cxp-mini-portrait" alt="{{this.name}}"></td>
-              <td>{{this.name}}</td><td>T{{this.tier}}</td><td>{{this.xp}}</td>
-              <td>{{this.progress}}{{#if this.threshold}}/{{this.threshold}}{{/if}}</td>
-              <td>{{this.pendingCount}}</td>
-              <td>{{#if this.tierReady}}<span class="cxp-badge">Tier Ready</span>{{else}}Normal{{/if}}</td>
-              <td class="cxp-row-actions">
-                <button data-action="openActorApp" data-actor-id="{{this.actorId}}" type="button">Open</button>
-                <button data-action="awardXP" data-actor-id="{{this.actorId}}" type="button">Award XP</button>
-                {{#if this.tierReady}}
-                  <button data-action="advanceTier" data-actor-id="{{this.actorId}}" type="button" class="cxp-advance-btn">Advance</button>
-                {{/if}}
-              </td>
-            </tr>
-          {{/each}}
-        </tbody>
-      </table>
+  <section class="cxp-tab-content" data-cxp-scroll>
+
+    {{#if (eq activeTab 'chart')}}
+      {{#if charts.hasActors}}
+        {{#if charts.hasData}}
+          <div class="cxp-stat-cards">
+            <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.currentXp}}</span><span class="cxp-stat-label">Party Current XP</span></div>
+            <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.earned}}</span><span class="cxp-stat-label">Total Earned</span></div>
+            <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.intrusionEarned}}</span><span class="cxp-stat-label">From GM Intrusions</span></div>
+            <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.spentDevelopment}}</span><span class="cxp-stat-label">Spent on Development</span></div>
+            <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.spentImmediate}}</span><span class="cxp-stat-label">Spent on Immediate</span></div>
+            <div class="cxp-stat-card"><span class="cxp-stat-value">{{charts.totals.playerIntrusionSpent}}</span><span class="cxp-stat-label">Spent on Player Intrusions</span></div>
+          </div>
+
+          <div class="cxp-chart-block">
+            <h4>Party XP Gained per Session</h4>
+            <svg viewBox="0 0 {{charts.earnedPerSession.width}} {{charts.earnedPerSession.height}}" class="cxp-chart" role="img" aria-label="Party XP gained per session">
+              {{#each charts.earnedPerSession.gridLines}}
+                <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+                <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+              {{/each}}
+              <line x1="{{charts.earnedPerSession.padLeft}}" y1="{{charts.earnedPerSession.baseY}}" x2="{{charts.earnedPerSession.width}}" y2="{{charts.earnedPerSession.baseY}}" class="cxp-chart-baseline"/>
+              {{#each charts.earnedPerSession.bars}}
+                <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="3" class="cxp-bar cxp-bar-earned"><title>{{this.label}}: {{this.value}} XP</title></rect>
+                {{#if (gt this.height 0)}}<text x="{{this.valueX}}" y="{{this.valueY}}" class="cxp-chart-value">{{this.value}}</text>{{/if}}
+                <text x="{{this.labelX}}" y="{{this.labelY}}" class="cxp-chart-label">{{this.label}}</text>
+              {{/each}}
+            </svg>
+          </div>
+
+          <div class="cxp-chart-block">
+            <h4>Per-Actor Comparison — all actors in one place</h4>
+            <div class="cxp-chart-legend-row">
+              {{#each charts.actorComparison.legend}}
+                <span class="cxp-legend-item"><span class="cxp-legend-dot" style="background: {{this.color}};"></span>{{this.label}}</span>
+              {{/each}}
+            </div>
+            <svg viewBox="0 0 {{charts.actorComparison.width}} {{charts.actorComparison.height}}" class="cxp-chart" role="img" aria-label="Per-actor XP comparison">
+              {{#each charts.actorComparison.gridLines}}
+                <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+                <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+              {{/each}}
+              <line x1="{{charts.actorComparison.padLeft}}" y1="{{charts.actorComparison.baseY}}" x2="{{charts.actorComparison.width}}" y2="{{charts.actorComparison.baseY}}" class="cxp-chart-baseline"/>
+              {{#each charts.actorComparison.bars}}
+                <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="2" fill="{{this.color}}" class="cxp-bar"><title>{{this.title}}</title></rect>
+              {{/each}}
+              {{#each charts.actorComparison.labels}}
+                <text x="{{this.x}}" y="{{this.y}}" class="cxp-chart-label">{{this.label}}</text>
+              {{/each}}
+            </svg>
+          </div>
+
+          <div class="cxp-chart-block">
+            <h4>Development Progress per Actor</h4>
+            <svg viewBox="0 0 {{charts.progressPerActor.width}} {{charts.progressPerActor.height}}" class="cxp-chart" role="img" aria-label="Development Progress per actor">
+              {{#each charts.progressPerActor.gridLines}}
+                <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+                <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+              {{/each}}
+              <line x1="{{charts.progressPerActor.padLeft}}" y1="{{charts.progressPerActor.baseY}}" x2="{{charts.progressPerActor.width}}" y2="{{charts.progressPerActor.baseY}}" class="cxp-chart-baseline"/>
+              {{#each charts.progressPerActor.bars}}
+                <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="3" class="cxp-bar cxp-bar-progress"><title>{{this.label}}: {{this.value}} Progress</title></rect>
+                {{#if (gt this.height 0)}}<text x="{{this.valueX}}" y="{{this.valueY}}" class="cxp-chart-value">{{this.value}}</text>{{/if}}
+                <text x="{{this.labelX}}" y="{{this.labelY}}" class="cxp-chart-label">{{this.label}}</text>
+              {{/each}}
+            </svg>
+          </div>
+
+          <div class="cxp-chart-block">
+            <h4>Party Development Progress per Session</h4>
+            <svg viewBox="0 0 {{charts.progressPerSession.width}} {{charts.progressPerSession.height}}" class="cxp-chart" role="img" aria-label="Party Development Progress per session">
+              {{#each charts.progressPerSession.gridLines}}
+                <line x1="{{this.x1}}" y1="{{this.y}}" x2="{{this.x2}}" y2="{{this.y}}" class="cxp-chart-grid"/>
+                <text x="4" y="{{this.y}}" class="cxp-chart-axis">{{this.value}}</text>
+              {{/each}}
+              <line x1="{{charts.progressPerSession.padLeft}}" y1="{{charts.progressPerSession.baseY}}" x2="{{charts.progressPerSession.width}}" y2="{{charts.progressPerSession.baseY}}" class="cxp-chart-baseline"/>
+              {{#each charts.progressPerSession.bars}}
+                <rect x="{{this.x}}" y="{{this.y}}" width="{{this.width}}" height="{{this.height}}" rx="3" class="cxp-bar cxp-bar-earned"><title>{{this.label}}: +{{this.value}} Progress</title></rect>
+                {{#if (gt this.height 0)}}<text x="{{this.valueX}}" y="{{this.valueY}}" class="cxp-chart-value">{{this.value}}</text>{{/if}}
+                <text x="{{this.labelX}}" y="{{this.labelY}}" class="cxp-chart-label">{{this.label}}</text>
+              {{/each}}
+            </svg>
+          </div>
+
+          {{#if charts.hasCategoryData}}
+          <div class="cxp-chart-block">
+            <h4>Party Development Spending by Category</h4>
+            <div class="cxp-donut-row">
+              <svg viewBox="0 0 {{charts.categoryDonut.size}} {{charts.categoryDonut.size}}" class="cxp-donut" role="img" aria-label="Party development spending by category">
+                {{#each charts.categoryDonut.paths}}
+                  <path d="{{this.path}}" fill="{{this.color}}"><title>{{this.label}}: {{this.value}} XP ({{this.percent}}%)</title></path>
+                {{/each}}
+                <text x="{{charts.categoryDonut.cx}}" y="{{charts.categoryDonut.cy}}" class="cxp-donut-center">{{charts.categoryDonut.total}} XP</text>
+              </svg>
+              <ul class="cxp-donut-legend">
+                {{#each charts.categoryDonut.paths}}
+                  <li><span class="cxp-legend-dot" style="background: {{this.color}};"></span>{{this.label}} — {{this.value}} XP ({{this.percent}}%)</li>
+                {{/each}}
+              </ul>
+            </div>
+          </div>
+          {{/if}}
+
+          <div class="cxp-chart-block">
+            <h4>Party Sessions</h4>
+            <table class="cxp-session-table">
+              <thead><tr><th>Date</th><th>Earned</th><th>Spent</th><th>Net</th><th>Progress</th><th>Intrusion XP</th><th>Immediate Spent</th></tr></thead>
+              <tbody>
+                {{#each charts.sessionTable}}
+                  <tr>
+                    <td>{{this.date}}</td>
+                    <td class="cxp-pos">+{{this.earned}}</td>
+                    <td class="cxp-neg">−{{this.spent}}</td>
+                    <td class="{{#if (gte this.net 0)}}cxp-pos{{else}}cxp-neg{{/if}}">{{this.net}}</td>
+                    <td>+{{this.progress}}</td>
+                    <td>{{this.intrusion}}</td>
+                    <td>{{this.immediate}}</td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+        {{else}}
+          <p class="cxp-empty">No XP activity recorded yet across the party. Combined charts appear once any character earns, spends, or logs XP.</p>
+        {{/if}}
+      {{else}}
+        <p class="cxp-empty">No player-owned PCs found in this world.</p>
+      {{/if}}
     {{/if}}
+
+    {{#if (eq activeTab 'party')}}
+      <div class="cxp-table-wrap" data-cxp-scroll>
+        <table class="cxp-party-table">
+          <thead><tr><th></th><th>Name</th><th>Tier</th><th>XP</th><th>Progress</th><th>Pending</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {{#each rows}}
+              <tr class="{{#if this.tierReady}}cxp-tier-ready-row{{/if}}">
+                <td><img src="{{this.img}}" class="cxp-mini-portrait" alt="{{this.name}}"></td>
+                <td>{{this.name}}</td><td>T{{this.tier}}</td><td>{{this.xp}}</td>
+                <td>{{this.progress}}{{#if this.threshold}}/{{this.threshold}}{{/if}}</td>
+                <td>{{this.pendingCount}}</td>
+                <td>{{#if this.tierReady}}<span class="cxp-badge">Tier Ready</span>{{else}}Normal{{/if}}</td>
+                <td class="cxp-row-actions">
+                  <button data-action="openActorApp" data-actor-id="{{this.actorId}}" type="button">Open</button>
+                  <button data-action="awardXP" data-actor-id="{{this.actorId}}" type="button">Award XP</button>
+                  {{#if this.tierReady}}
+                    <button data-action="advanceTier" data-actor-id="{{this.actorId}}" type="button" class="cxp-advance-btn">Advance</button>
+                  {{/if}}
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    {{/if}}
+
     {{#if (eq activeTab 'requests')}}
       <h3>Pending Requests</h3>
       <ul class="cxp-list">

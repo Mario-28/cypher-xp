@@ -1,9 +1,5 @@
 import { MODULE_ID } from "./constants.js";
 
-/**
- * Thin adapter over confirmed Cypher System PC actor fields.
- * Never writes to system.basic.advancement (native four-advancement tracker).
- */
 export class ActorAdapter {
   constructor(actor) { this.actor = actor; }
   static POOLS = ["might", "speed", "intellect", "additional"];

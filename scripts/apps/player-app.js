@@ -1,12 +1,17 @@
-import { MODULE_ID, PURCHASE_CATALOG } from "../constants.js";
+import { MODULE_ID, PURCHASE_CATALOG, ABILITY_POOLS, SPEND_TYPES, CHART_COLORS } from "../constants.js";
 import { DevelopmentService } from "../development-service.js";
+import { ItemService } from "../item-service.js";
+import { OverflowWatcher } from "../utils/overflow.js";
+import { TooltipManager } from "../utils/tooltip.js";
+import { RulesLauncher } from "../utils/rules-launcher.js";
+import { summarizeTransactions } from "../utils/chart-data.js";
+import { barChart, donutChart } from "../utils/svg-charts.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static _instances = new Map();
 
-  /** Singleton per actor: focuses the existing window instead of duplicating it. */
   static show(actor) {
     const existing = PlayerDevelopmentApp._instances.get(actor.id);
     if (existing?.rendered) {
@@ -23,11 +28,12 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
     id: "cypher-xp-player-app",
     tag: "div",
     window: { title: "Cypher XP — Development Track", icon: "fa-solid fa-chart-line", resizable: true },
-    position: { width: 640, height: 660 },
+    position: { width: 680, height: 700 },
     actions: {
       submitPurchase: PlayerDevelopmentApp.onSubmitPurchase,
       cancelRequest: PlayerDevelopmentApp.onCancelRequest,
-      changeTab: PlayerDevelopmentApp.onChangeTab
+      changeTab: PlayerDevelopmentApp.onChangeTab,
+      logSpend: PlayerDevelopmentApp.onLogSpend
     }
   };
 
@@ -36,7 +42,7 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
   constructor({ actor } = {}) {
     super();
     this.actor = actor;
-    this.activeTab = "overview";
+    this.activeTab = "chart";
     this._updateHook = Hooks.on("updateActor", (updated) => {
       if (updated.id === this.actor?.id && this.rendered) this.render();
     });
@@ -45,7 +51,15 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
   async close(options = {}) {
     Hooks.off("updateActor", this._updateHook);
     PlayerDevelopmentApp._instances.delete(this.actor?.id);
+    TooltipManager.hide();
     return super.close(options);
+  }
+
+  _onRender(context, options) {
+    super._onRender?.(context, options);
+    OverflowWatcher.enable(this.element);
+    TooltipManager.bind(this.element);
+    RulesLauncher.attach(this.element);
   }
 
   async _prepareContext() {
@@ -67,13 +81,75 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
         ...a,
         improvementsText: (a.improvements ?? []).map(i => i.label).join("; ")
       })),
+      charts: PlayerDevelopmentApp.buildCharts(data),
       activeTab: this.activeTab
+    };
+  }
+
+  static buildCharts(data) {
+    const summary = summarizeTransactions(data.transactions);
+    const sessions = summary.sessions;
+
+    const earnedPerSession = barChart(sessions.map(s => ({ label: s.date, value: s.earned })));
+    const progressPerSession = barChart(sessions.map(s => ({ label: s.date, value: s.progress })));
+    const intrusionPerSession = barChart(sessions.map(s => ({ label: s.date, value: s.intrusion })));
+    const immediatePerSession = barChart(sessions.map(s => ({ label: s.date, value: s.immediate })));
+    const categoryDonut = donutChart(summary.byCategory);
+
+    const sessionTable = sessions.slice().reverse().slice(0, 12).map(s => ({
+      ...s,
+      net: s.earned - s.spent
+    }));
+
+    return {
+      hasData: summary.hasData,
+      totals: summary.totals,
+      earnedPerSession,
+      progressPerSession,
+      intrusionPerSession,
+      immediatePerSession,
+      categoryDonut,
+      sessionTable,
+      hasCategoryData: summary.byCategory.length > 0,
+      hasIntrusionData: summary.totals.intrusionEarned > 0,
+      hasImmediateData: summary.totals.spentImmediate > 0
     };
   }
 
   static onChangeTab(event, target) {
     this.activeTab = target.dataset.tab;
     this.render();
+  }
+
+  static async onLogSpend() {
+    const typeOptions = Object.entries(SPEND_TYPES)
+      .map(([key, t]) => `<option value="${key}">${t.label}</option>`).join("");
+
+    const result = await foundry.applications.api.DialogV2.prompt({
+      window: { title: "Log Immediate Spend" },
+      content: `
+        <p class="cxp-hint">For table spends: rerolls, player intrusions, insights. GM intrusions are recorded automatically.</p>
+        <label>Type: <select name="spendType" style="width:100%;">${typeOptions}</select></label><br>
+        <label>XP amount: <input type="number" name="amount" value="1" min="1" step="1"></label><br>
+        <label>Note: <input type="text" name="note" style="width:100%;" placeholder="optional"></label>`,
+      ok: {
+        callback: (event, button, dialog) => {
+          const el = dialog.element;
+          return {
+            spendType: el.querySelector("select[name='spendType']").value,
+            amount: Number(el.querySelector("input[name='amount']").value),
+            note: el.querySelector("input[name='note']").value.trim()
+          };
+        }
+      }
+    }).catch(() => null);
+    if (!result) return;
+
+    const transaction = await DevelopmentService.recordImmediateSpend(this.actor, result);
+    if (transaction) {
+      ui.notifications.info(`Cypher XP: logged ${result.amount} XP spend (${SPEND_TYPES[result.spendType]?.label ?? "other"}).`);
+      this.render();
+    }
   }
 
   static async onSubmitPurchase(event, target) {
@@ -88,17 +164,50 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
       if (!dist) return;
       payload.poolDistribution = dist;
       payload.requestedCost = entry.cost;
+
     } else if (catalogKey === "edge-increase") {
       const poolKey = await PlayerDevelopmentApp.promptPoolChoice();
       if (!poolKey) return;
       payload.poolKey = poolKey;
       payload.requestedCost = entry.cost;
+
+    } else if (catalogKey === "skill-training") {
+      const name = await PlayerDevelopmentApp.promptText("Skill Name", "e.g. Navigation, Persuasion, Numenera");
+      if (!name) return;
+      payload.skillName = name;
+      payload.label = `${entry.label}: ${name}`;
+      payload.requestedCost = entry.cost;
+
+    } else if (catalogKey === "skill-specialization") {
+      const skillId = await PlayerDevelopmentApp.promptSkillChoice(this.actor, "Trained", "Specialize — choose a Trained skill");
+      if (!skillId) return;
+      const skill = this.actor.items.get(skillId);
+      payload.skillId = skillId;
+      payload.label = `${entry.label}: ${skill?.name ?? "?"}`;
+      payload.requestedCost = entry.cost;
+
+    } else if (catalogKey === "remove-inability") {
+      const skillId = await PlayerDevelopmentApp.promptSkillChoice(this.actor, "Inability", "Remove Inability — choose a skill");
+      if (!skillId) return;
+      const skill = this.actor.items.get(skillId);
+      payload.skillId = skillId;
+      payload.label = `${entry.label}: ${skill?.name ?? "?"}`;
+      payload.requestedCost = entry.cost;
+
+    } else if (catalogKey === "lore-language-trade") {
+      const name = await PlayerDevelopmentApp.promptText("Language, Lore, or Trade", "e.g. Old Imperial, Alchemy, Cartography");
+      if (!name) return;
+      payload.skillName = name;
+      payload.label = `${entry.label}: ${name}`;
+      payload.requestedCost = entry.cost;
+
     } else if (entry.tierScaled !== undefined) {
-      const abilityTier = await PlayerDevelopmentApp.promptAbilityTier();
-      if (abilityTier === null) return;
-      payload.abilityTier = abilityTier;
-      payload.requestedCost = entry.costBase + entry.tierScaled * abilityTier;
-      payload.label = `${entry.label} (Tier ${abilityTier})`;
+      const details = await PlayerDevelopmentApp.promptAbilityDetails(catalogKey, entry);
+      if (!details) return;
+      Object.assign(payload, details);
+      payload.requestedCost = entry.costBase + entry.tierScaled * details.abilityTier;
+      payload.label = `${entry.label}: ${details.abilityName} (Tier ${details.abilityTier})`;
+
     } else if (catalogKey === "permanent-asset") {
       const name = await PlayerDevelopmentApp.promptText("Asset Name", "e.g. Safehouse, Mentor, Guild Standing");
       if (!name) return;
@@ -107,6 +216,7 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
       payload.assetName = name;
       payload.label = `${entry.label}: ${name}`;
       payload.requestedCost = cost;
+
     } else if (catalogKey === "asset-improvement") {
       const data = DevelopmentService.getData(this.actor);
       if (!data.assets.length) {
@@ -119,6 +229,7 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
       if (cost === null) return;
       payload.assetId = assetId;
       payload.requestedCost = cost;
+
     } else {
       payload.requestedCost = entry.cost;
     }
@@ -136,8 +247,6 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
     await DevelopmentService.cancelRequest(this.actor, target.dataset.requestId);
     this.render();
   }
-
-  // ---------- Dialog helpers ----------
 
   static async promptPoolDistribution() {
     return foundry.applications.api.DialogV2.prompt({
@@ -180,11 +289,45 @@ export class PlayerDevelopmentApp extends HandlebarsApplicationMixin(Application
     }).catch(() => null);
   }
 
-  static async promptAbilityTier() {
+  static async promptSkillChoice(actor, rating, title) {
+    const skills = ItemService.skillsByRating(actor, rating);
+    if (!skills.length) {
+      ui.notifications.warn(`Cypher XP: no skills with rating "${rating}" found on ${actor.name}.`);
+      return null;
+    }
+    const options = skills.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
     return foundry.applications.api.DialogV2.prompt({
-      window: { title: "Ability Tier" },
-      content: `<label>Ability Tier: <input type="number" name="tier" min="1" max="6" value="1" step="1"></label>`,
-      ok: { callback: (event, button, dialog) => Number(dialog.element.querySelector("input[name='tier']").value) }
+      window: { title },
+      content: `<label>Skill: <select name="skillId">${options}</select></label>`,
+      ok: { callback: (event, button, dialog) => dialog.element.querySelector("select[name='skillId']").value }
+    }).catch(() => null);
+  }
+
+  static async promptAbilityDetails(catalogKey, entry) {
+    const poolOptions = ABILITY_POOLS.map(p => `<option value="${p}">${p}</option>`).join("");
+    return foundry.applications.api.DialogV2.prompt({
+      window: { title: entry.label },
+      content: `
+        <label>Ability name: <input type="text" name="abilityName" style="width:100%;" placeholder="e.g. Fleet of Foot"></label><br>
+        <label>Ability tier: <input type="number" name="abilityTier" min="1" max="6" value="1" step="1"></label><br>
+        <label>Pool point cost: <input type="number" name="abilityCost" min="0" value="0" step="1"></label><br>
+        <label>Pool: <select name="abilityPool">${poolOptions}</select></label>`,
+      ok: {
+        callback: (event, button, dialog) => {
+          const el = dialog.element;
+          const name = el.querySelector("input[name='abilityName']").value.trim();
+          if (!name) {
+            ui.notifications.warn("Cypher XP: ability name is required.");
+            return null;
+          }
+          return {
+            abilityName: name,
+            abilityTier: Number(el.querySelector("input[name='abilityTier']").value),
+            abilityCost: String(el.querySelector("input[name='abilityCost']").value),
+            abilityPool: el.querySelector("select[name='abilityPool']").value
+          };
+        }
+      }
     }).catch(() => null);
   }
 
