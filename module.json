@@ -2,7 +2,7 @@
   "id": "cypher-xp",
   "title": "Cypher XP",
   "description": "GM-approved Development Track advancement for the Cypher System, with Cypher Taskbar and Cypher GM Taskbar integration.",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "compatibility": {
     "minimum": "14",
     "verified": "14.366"

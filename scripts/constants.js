@@ -108,7 +108,6 @@ export const CHART_COLORS = {
   other:     "#60707a"
 };
 
-// Series colors for the GM party comparison chart.
 export const PARTY_SERIES_COLORS = {
   earned:    "#b98328",
   intrusion: "#9d3b2d",
