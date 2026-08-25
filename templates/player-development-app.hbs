@@ -1,0 +1,105 @@
+<div class="cypher-xp-app">
+  <header class="cxp-header">
+    <img src="{{actor.img}}" class="cxp-portrait" alt="{{actor.name}}">
+    <div class="cxp-header-info">
+      <h2>{{actor.name}}</h2>
+      <div class="cxp-header-stats">
+        <span class="cxp-tag">Tier {{tier}}</span>
+        <span class="cxp-tag">XP {{xp}}</span>
+        <span class="cxp-tag">Progress {{progress}}{{#if threshold}}/{{threshold}}{{else}} (max tier){{/if}}</span>
+        {{#if tierReady}}<span class="cxp-tag cxp-tag-ready">Tier Ready</span>{{/if}}
+      </div>
+    </div>
+  </header>
+
+  <div class="cxp-progress-bar"><div class="cxp-progress-fill" style="width: {{percent}}%;"></div></div>
+  {{#if tierReady}}
+    <p class="cxp-remaining cxp-ready-note">Threshold reached — awaiting GM tier advancement.</p>
+  {{else if threshold}}
+    <p class="cxp-remaining">{{remaining}} Development Progress remaining to the next tier.</p>
+  {{else}}
+    <p class="cxp-remaining">Maximum tier reached.</p>
+  {{/if}}
+
+  <nav class="cxp-tabs">
+    <a data-action="changeTab" data-tab="overview" class="{{#if (eq activeTab 'overview')}}active{{/if}}">Overview</a>
+    <a data-action="changeTab" data-tab="develop" class="{{#if (eq activeTab 'develop')}}active{{/if}}">Develop</a>
+    <a data-action="changeTab" data-tab="assets" class="{{#if (eq activeTab 'assets')}}active{{/if}}">Assets</a>
+    <a data-action="changeTab" data-tab="requests" class="{{#if (eq activeTab 'requests')}}active{{/if}}">Requests</a>
+    <a data-action="changeTab" data-tab="history" class="{{#if (eq activeTab 'history')}}active{{/if}}">History</a>
+  </nav>
+
+  <section class="cxp-tab-content">
+    {{#if (eq activeTab 'overview')}}
+      <h3>Recent Activity</h3>
+      <ul class="cxp-list">
+        {{#each transactions}}
+          <li>
+            <span class="cxp-list-label">{{this.label}}</span>
+            <span class="cxp-list-delta {{#if (gt this.xpDelta 0)}}positive{{else}}negative{{/if}}">{{this.xpDelta}} XP</span>
+            <span class="cxp-list-progress">+{{this.progressDelta}} Progress</span>
+          </li>
+        {{else}}<li class="cxp-empty">No activity yet.</li>{{/each}}
+      </ul>
+    {{/if}}
+
+    {{#if (eq activeTab 'develop')}}
+      <h3>Permanent Development</h3>
+      <p class="cxp-hint">Every purchase requires GM approval before it takes effect.</p>
+      <ul class="cxp-catalog">
+        {{#each catalog}}
+          <li>
+            <span class="cxp-catalog-label">{{this.label}}</span>
+            <span class="cxp-catalog-cost">
+              {{#if this.cost}}{{this.cost}} XP{{/if}}
+              {{#if this.costBase}}from {{this.costBase}} XP{{/if}}
+              {{#if this.costRange}}{{this.costRange.[0]}}–{{this.costRange.[1]}} XP{{/if}}
+            </span>
+            <button data-action="submitPurchase" data-catalog-key="{{this.key}}" type="button">Request</button>
+          </li>
+        {{/each}}
+      </ul>
+    {{/if}}
+
+    {{#if (eq activeTab 'assets')}}
+      <h3>Permanent Assets</h3>
+      <ul class="cxp-list">
+        {{#each assets}}
+          <li>
+            <span class="cxp-list-label">{{this.name}} <em>({{this.cost}} XP)</em></span>
+            {{#if this.description}}<span class="cxp-list-notes">{{this.description}}</span>{{/if}}
+            {{#if this.improvementsText}}<span class="cxp-list-notes">Improvements: {{this.improvementsText}}</span>{{/if}}
+          </li>
+        {{else}}<li class="cxp-empty">No permanent assets yet. Request one from the Develop tab.</li>{{/each}}
+      </ul>
+    {{/if}}
+
+    {{#if (eq activeTab 'requests')}}
+      <h3>My Requests</h3>
+      <ul class="cxp-list">
+        {{#each requests}}
+          <li>
+            <span class="cxp-list-label">{{this.label}} ({{this.requestedCost}} XP)</span>
+            <span class="cxp-status cxp-status-{{this.status}}">{{this.status}}</span>
+            {{#if (eq this.status 'pending')}}
+              <button data-action="cancelRequest" data-request-id="{{this.id}}" type="button">Cancel</button>
+            {{/if}}
+          </li>
+        {{else}}<li class="cxp-empty">No requests submitted yet.</li>{{/each}}
+      </ul>
+    {{/if}}
+
+    {{#if (eq activeTab 'history')}}
+      <h3>Full Transaction History</h3>
+      <ul class="cxp-list">
+        {{#each transactions}}
+          <li>
+            <span class="cxp-list-label">{{this.label}}</span>
+            <span class="cxp-list-delta {{#if (gt this.xpDelta 0)}}positive{{else}}negative{{/if}}">{{this.xpDelta}} XP</span>
+            <span class="cxp-list-progress">+{{this.progressDelta}} Progress</span>
+          </li>
+        {{else}}<li class="cxp-empty">No history yet.</li>{{/each}}
+      </ul>
+    {{/if}}
+  </section>
+</div>

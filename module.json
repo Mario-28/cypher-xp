@@ -1,0 +1,50 @@
+{
+  "id": "cypher-xp",
+  "title": "Cypher XP",
+  "description": "GM-approved Development Track advancement for the Cypher System, with Cypher Taskbar and Cypher GM Taskbar integration.",
+  "version": "1.5.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.366"
+  },
+  "authors": [
+    {
+      "name": "Cypher GOODIES"
+    }
+  ],
+  "esmodules": [
+    "scripts/cypher-xp.js"
+  ],
+  "styles": [
+    "styles/cypher-xp.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "cyphersystem",
+        "type": "system",
+        "compatibility": {}
+      }
+    ],
+    "recommends": [
+      {
+        "id": "cypher-taskbar",
+        "type": "module",
+        "reason": "Player XP widget and Development Track launcher."
+      },
+      {
+        "id": "cypher-GM-taskbar",
+        "type": "module",
+        "reason": "GM icon menu, flyout, and party dashboard launcher."
+      }
+    ]
+  },
+  "license": "MIT"
+}

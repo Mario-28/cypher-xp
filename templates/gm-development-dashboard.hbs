@@ -1,0 +1,44 @@
+<div class="cypher-xp-gm-app">
+  <nav class="cxp-tabs">
+    <a data-action="changeTab" data-tab="party" class="{{#if (eq activeTab 'party')}}active{{/if}}">Party</a>
+    <a data-action="changeTab" data-tab="requests" class="{{#if (eq activeTab 'requests')}}active{{/if}}">Requests</a>
+  </nav>
+  <section class="cxp-tab-content">
+    {{#if (eq activeTab 'party')}}
+      <table class="cxp-party-table">
+        <thead><tr><th></th><th>Name</th><th>Tier</th><th>XP</th><th>Progress</th><th>Pending</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {{#each rows}}
+            <tr class="{{#if this.tierReady}}cxp-tier-ready-row{{/if}}">
+              <td><img src="{{this.img}}" class="cxp-mini-portrait" alt="{{this.name}}"></td>
+              <td>{{this.name}}</td><td>T{{this.tier}}</td><td>{{this.xp}}</td>
+              <td>{{this.progress}}{{#if this.threshold}}/{{this.threshold}}{{/if}}</td>
+              <td>{{this.pendingCount}}</td>
+              <td>{{#if this.tierReady}}<span class="cxp-badge">Tier Ready</span>{{else}}Normal{{/if}}</td>
+              <td class="cxp-row-actions">
+                <button data-action="openActorApp" data-actor-id="{{this.actorId}}" type="button">Open</button>
+                <button data-action="awardXP" data-actor-id="{{this.actorId}}" type="button">Award XP</button>
+                {{#if this.tierReady}}
+                  <button data-action="advanceTier" data-actor-id="{{this.actorId}}" type="button" class="cxp-advance-btn">Advance</button>
+                {{/if}}
+              </td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    {{/if}}
+    {{#if (eq activeTab 'requests')}}
+      <h3>Pending Requests</h3>
+      <ul class="cxp-list">
+        {{#each allPending}}
+          <li>
+            <span class="cxp-list-label">{{this.label}} — requested {{this.requestedCost}} XP</span>
+            {{#if this.notes}}<span class="cxp-list-notes">{{this.notes}}</span>{{/if}}
+            <button data-action="approveRequest" data-actor-id="{{this.actorId}}" data-request-id="{{this.id}}" type="button">Approve</button>
+            <button data-action="rejectRequest" data-actor-id="{{this.actorId}}" data-request-id="{{this.id}}" type="button">Reject</button>
+          </li>
+        {{else}}<li class="cxp-empty">No pending requests.</li>{{/each}}
+      </ul>
+    {{/if}}
+  </section>
+</div>
